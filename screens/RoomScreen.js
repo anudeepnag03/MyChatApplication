@@ -4,59 +4,23 @@ import {
   Bubble,
   Send,
   SystemMessage,
-  Avatar,
-
 } from 'react-native-gifted-chat';
 import { ActivityIndicator, View, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { IconButton } from 'react-native-paper';
-import { AuthContext } from '../navigation/AuthProvider';
-import firestore from '@react-native-firebase/firestore';
 import { launchImageLibrary } from 'react-native-image-picker';
 import storage from '@react-native-firebase/storage';
 import imageIcon from '../Images/image.png'
+import { ChatContext } from '../provider/ChatProvider';
 
 export default function RoomScreen({ route }) {
 
-
-  const [messages, setMessages] = useState([]);
-  const { thread } = 'THREADS';
-  const { user } = useContext(AuthContext);
-  const currentUser = user.toJSON();
+//  const [messages, setMessages] = useState([]);
+  const { groupName, userName, userEmail,userId } = route.params;
+  const { setThread, handleSend,createUser,messages,uploadImage } = useContext(ChatContext);
   const [selectedFile, setSelectedFile] = useState(null);
 
   const [imageUri, setImageUri] = useState(null)
-
-  async function handleSend(messages) {
-    const text = messages[0].text;
-
-    firestore()
-      .collection('THREADS')
-      .doc('Anudeep')
-      .collection('MESSAGES')
-      .add({
-        text,
-        createdAt: new Date().getTime(),
-        user: {
-          _id: "1",
-          email: "anudeep.nag@gmail.com",
-          avatar: "http://commondatastorage.googleapis.com/codeskulptor-assets/lathrop/asteroid_blend.png"
-        },
-        image: "https://firebasestorage.googleapis.com/v0/b/anuchatapplication.appspot.com/o/images%2Fblack-t-shirt-sm1.jpeg?alt=media&token=b6f6f009-88eb-44b8-bc95-3e2f8bd2f65b"
-      });
-
-    /* await firestore()
-       .collection('THREADS')
-       .doc('Anudeep')
-       .set(
-         {
-           latestMessage: {
-             text,
-             createdAt: new Date().getTime()
-           }
-         },
-         { merge: true }
-       );*/
-  }
+  //console.log("Group Name " + groupName + " userName" + userName + "userEmail" + userEmail)
 
   useEffect(() => {
     if (selectedFile && selectedFile.name && selectedFile.uri) {
@@ -80,9 +44,9 @@ export default function RoomScreen({ route }) {
     task.on('state_changed', taskSnapshot => {
       console.log(`${taskSnapshot.bytesTransferred} transferred out of ${taskSnapshot.totalBytes}`);
     });
-    
+
     task.then(() => {
-     
+
     });
     try {
       await task;
@@ -90,53 +54,21 @@ export default function RoomScreen({ route }) {
       console.error(e);
     }
     const url = await storage().ref(imageLoc).getDownloadURL();
-    console.log("Downloaded URL "+url)
-    // set progress state
-
-    /*Alert.alert(
-      'Photo uploaded!',
-      'Your photo has been uploaded to Firebase Cloud StoragsqAAAAXe!'
-    );*/
+    console.log("Downloaded URL " + url)
     selectedFile(null);
   }
 
   useEffect(() => {
-    console.log("Thread Id " + thread)
-    const messagesListener = firestore()
-      .collection('THREADS')
-      .doc('Anudeep')
-      .collection('MESSAGES')
-      .orderBy('createdAt', 'desc')
-      .onSnapshot(querySnapshot => {
-        const messages = querySnapshot.docs.map(doc => {
-          console.log("Got new messages ")
-          const firebaseData = doc.data();
-
-          const data = {
-            _id: doc.id,
-            text: '',
-            system: true,
-            createdAt: new Date().getTime(),
-            ...firebaseData
-          };
-
-          if (!firebaseData.system) {
-            data.user = {
-              ...firebaseData.user,
-              name: firebaseData.user.email
-            };
-          }
-
-          return data;
-        });
-
-        setMessages(messages);
-      });
-
-    // Stop listening for updates whenever the component unmounts
-    return () => messagesListener();
+    createUser({userName:userName,groupName:groupName,userEmail:userEmail,userId:userId})
+    return () => {
+      unSucscribe()
+    } 
   }, []);
-
+ 
+  function unSucscribe() {
+    setThread(null)
+    console.log("UnSubscribe")
+ }
   function renderBubble(props) {
     return (
       <Bubble
@@ -227,8 +159,7 @@ export default function RoomScreen({ route }) {
             uri: Platform.OS === 'android' ? uri : uri.replace('file://', ''),
             type: type || 'video/quicktime'
           };
-          setImageUri(uri)
-          setSelectedFile(() => file);
+            uploadImage(uri)
         }
       }
     });
@@ -238,7 +169,7 @@ export default function RoomScreen({ route }) {
     <GiftedChat
       messages={messages}
       onSend={handleSend}
-      user={{ _id: currentUser.uid }}
+      user={{ _id: userId }}
       placeholder='Type your message here...'
       alwaysShowSend
       showUserAvatar
@@ -260,10 +191,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   sendingContainer: {
+    flexDirection:'row',
     justifyContent: 'center',
     alignItems: 'center'
   },
   bottomComponentContainer: {
+    flexDirection:'row',
     justifyContent: 'center',
     alignItems: 'center'
   },
