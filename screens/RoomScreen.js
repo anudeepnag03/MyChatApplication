@@ -59,6 +59,7 @@ export default function RoomScreen({ route }) {
   }
 
   useEffect(() => {
+    console.log("Chat Screen Entered")
     createUser({userName:userName,groupName:groupName,userEmail:userEmail,userId:userId})
     return () => {
       unSucscribe()
@@ -101,6 +102,7 @@ export default function RoomScreen({ route }) {
         <View style={styles.sendingContainer}>
           <IconButton icon='send-circle' size={32} color='#6646ee' />
         </View>
+       
       </Send>
     );
   }
@@ -124,7 +126,7 @@ export default function RoomScreen({ route }) {
 
   const renderActions = () => {
     return (
-      <View style={styles.bottomComponentContainer}>
+      <View style={styles.sendingContainer}>
         <TouchableOpacity style={styles.select} onPress={handleSelectFile}>
           <Image source={imageUri == null ? imageIcon : { uri: imageUri }} style={{ width: 24, height: 24 }} />
         </TouchableOpacity>
@@ -175,8 +177,8 @@ export default function RoomScreen({ route }) {
       showUserAvatar
       scrollToBottom
       renderBubble={renderBubble}
-      renderLoading={renderLoading}
       renderSend={renderSend}
+      renderLoading={renderLoading}
       renderActions={renderActions}
       scrollToBottomComponent={scrollToBottomComponent}
       renderSystemMessage={renderSystemMessage}
@@ -197,8 +199,7 @@ const styles = StyleSheet.create({
   },
   bottomComponentContainer: {
     flexDirection:'row',
-    justifyContent: 'center',
-    alignItems: 'center'
+    justifyContent: 'end',
   },
   systemMessageWrapper: {
     backgroundColor: '#6646ee',
