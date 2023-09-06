@@ -25,6 +25,8 @@ export const ChatProvider = ({ children }) => {
   let started = false
 
   async function createUser({ userName, groupName, userEmail, userId }) {
+    started = false
+    console.log("Creating New User " + started)
     try {
       const snapShot = firestore()
         .collection(groupName)
@@ -33,7 +35,6 @@ export const ChatProvider = ({ children }) => {
       if ((await snapShot).empty) {
         createNewUser({ userName: userName, groupName: groupName, userEmail: userEmail, userId: userId })
       } else {
-        started = false
         setThread({ groupName: groupName, userName: userName, userEmail: userEmail, userId: userId })
       }
     } catch (e) {
@@ -41,7 +42,7 @@ export const ChatProvider = ({ children }) => {
     }
   }
 
-  async function createNewUser({ userName, groupName, userEmail, userId }) {
+function createNewUser({ userName, groupName, userEmail, userId }) {
     console.log("Creating New User " + userName)
     setMessages([])
     members = []
@@ -69,9 +70,8 @@ export const ChatProvider = ({ children }) => {
             userName: userName,
             userEmail: "audeep.nag@gmail.com"
           })
-        started = false
         setThread({ groupName: groupName, userName: userName, userEmail: userEmail, userId: userId })
-      }); s
+      });
   }
 
   async function uploadImage(imageUri) {
@@ -149,44 +149,48 @@ export const ChatProvider = ({ children }) => {
           displayName: thread.userName,
           avatar: "http://commondatastorage.googleapis.com/codeskulptor-assets/lathrop/asteroid_blend.png"
         },
-        image: "https://firebasestorage.googleapis.com/v0/b/anuchatapplication.appspot.com/o/footfallImages%2FFootFallz1693935289978.jpeg?alt=media&token=f7a4f78f-ecfc-473f-846a-647d26237639"
+        image: imageUrl
       });
 
 
   }
 
-  function fetchMessages(msgCollection) {
-    try {
-
-    } catch (e) {
-      //console.warn(e);
-    }
+  function resetFields(msgCollection) {
+     setMessages([])
+     started = false
   }
   useEffect(() => {
-   
+    resetFields()
     if (thread != null) {
       console.log("Thread Name in Chat Provide " + thread.groupName)
-     const messgeListner =  firestore()
+      const messgeListner = firestore()
         .collection(thread.groupName)
         .onSnapshot(querySnapshot => {
-          console.log(" started Already " + started)
           if (querySnapshot != null && !querySnapshot.empty) {
             querySnapshot.docs.map(documentSnapshot => {
               if (documentSnapshot != null
                 && !documentSnapshot.empty) {
+                  console.log("Creating New User " + started)
+                if (started) return
                 console.log("Document Id " + documentSnapshot.id)
                 members.push(documentSnapshot.id)
+                if (members.length == querySnapshot.docs.length) {
+                  started = true
+                }
                 // let docs = documentSnapshot.ref.collection('MESSAGES').get().listDocuments()
                 let msgCollection = documentSnapshot.ref.collection('MESSAGES')
                 if (msgCollection != null) {
-                 msgCollection.onSnapshot(querySnapshot => {
+                  msgCollection.onSnapshot(querySnapshot => {
                     if (querySnapshot != null
                       && !querySnapshot.empty) {
-                      querySnapshot.docs.map(doc => {
-                        const firebaseData = doc.data();
-                        console.log("Message Id " + doc.id)
-                        //if (!checkMessageIdExist(doc.id)) {
-                          console.log("fetchMessages message Id " + doc.id + " Time " +firebaseData.text)
+
+                      querySnapshot.docChanges().forEach((change) => {
+                        const doc = change.doc
+                        const firebaseData = change.doc.data()
+                        if (change.type === "added") {
+                             console.log("New Document Added : ", firebaseData);
+
+                          //if (!checkMessageIdExist(doc.id)) {
                           messageIds.push(doc.id)
                           const data = {
                             _id: doc.id,
@@ -202,32 +206,43 @@ export const ChatProvider = ({ children }) => {
                               name: firebaseData.user.displayName,
                               _id: firebaseData.user._id,
                             }
-                          } 
-                          messages.push(data)
-                          let newData =  messages
-                              .filter( (ele, ind) => ind === messages
-                             .findIndex( elem => elem._id === ele._id))
-                             .sort((a, b) => b.createdAt - a.createdAt)
-                          setMessages(newData);
+                          }
+                          let newData = messages
+                          newData.push(data)
+                          console.log("Length Of the messages ", newData.length)
+                         
+                          setMessages(newData.sort((a, b) => b.createdAt - a.createdAt));
+
+                        }
+                        if (change.type === "modified") {
+                          console.log("Modified city: ", change.doc.data());
+                        }
+                        if (change.type === "removed") {
+                          console.log("Removed Doc: ", doc);
+                          setMessages(oldMessages => oldMessages.filter((document) => document._id != doc.id))
+                        }
                       });
+
                     }
                   })
 
                 }
+              
               }
 
             })
 
           }
         })
-        return () => messgeListner
-      }
-    
+      return () => messgeListner
+    }
 
-  
+
+
 
     // Stop listening for updates whenever the component unmounts
   }, [thread]);
+
 
 
   return (
